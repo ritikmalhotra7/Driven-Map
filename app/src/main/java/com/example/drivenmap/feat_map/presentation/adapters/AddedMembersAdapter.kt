@@ -1,6 +1,5 @@
 package com.example.drivenmap.feat_map.presentation.adapters
 
-import android.location.GnssAntennaInfo.SphericalCorrections
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.AsyncListDiffer
@@ -11,7 +10,6 @@ import coil.transform.CircleCropTransformation
 import com.example.drivenmap.R
 import com.example.drivenmap.databinding.AddedMemberItemBinding
 import com.example.drivenmap.feat_map.domain.models.AddedUser
-import com.google.maps.android.SphericalUtil
 
 class AddedMembersAdapter:RecyclerView.Adapter<AddedMembersAdapter.ViewHolder>() {
     private val callback = object: DiffUtil.ItemCallback<AddedUser>(){
