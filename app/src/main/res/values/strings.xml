@@ -5,4 +5,12 @@
     <string name="_200m_away">200m away</string>
     <string name="you_need_to_allow_all_the_time_location_access">You need to allow all the time location access</string>
     <string name="you_need_to_allow_location_permission_in_order_to_use_the_app">You need to allow location permission in order to use the app</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="start_a_session">Start a Session</string>
+    <string name="something_went_wrong_with_google_signing">something went wrong with google Signing</string>
+    <string name="lorem5">Lorem ipsum dolor sit amet.</string>
+    <string name="add_a_member">Add a member</string>
+    <string name="you_can_add_upto_6_members">You can add upto 6 Members</string>
+    <string name="enter_code_to_add_member">Enter code to add member</string>
+    <string name="fab_button_to_add_members">fab button to add members</string>
 </resources>

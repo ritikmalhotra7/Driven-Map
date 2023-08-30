@@ -7,8 +7,7 @@
     android:layout_marginHorizontal="@dimen/_4dp"
     android:layout_marginVertical="@dimen/_5dp"
     android:background="@drawable/rounded_box"
-    android:maxHeight="@dimen/_40dp"
-    android:padding="@dimen/_10dp">
+    android:maxHeight="@dimen/_40dp">
 
     <ImageView
         android:id="@+id/added_member_item_iv_display_photo"
@@ -18,13 +17,17 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/added_member_item_tv_distance_away"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginVertical="@dimen/_16dp"
+        android:layout_marginStart="@dimen/_16dp"
+        android:layout_marginEnd="@dimen/_12dp"/>
 
     <TextView
         android:id="@+id/added_member_item_tv_distance_away"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="@dimen/_4dp"
+        android:layout_marginEnd="@dimen/_12dp"
+        android:layout_marginVertical="@dimen/_16dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:text="@string/_200m_away"

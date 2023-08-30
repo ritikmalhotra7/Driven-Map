@@ -1,11 +1,5 @@
 package com.example.drivenmap.feat_core.utils
 
-import android.Manifest
-import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
-import pub.devrel.easypermissions.EasyPermissions
-
 object Utils {
     const val MAP_ZOOM = 18f
     const val REQUEST_CODE_FORE_LOCATION_PERMISSION = 100
@@ -17,5 +11,6 @@ object Utils {
     const val CURRENT_LOCATION = "CURRENT_LOCATION"
     const val CURRENT_LOCATION_LATITUDE = "CURRENT_LOCATION_LATITUDE"
     const val CURRENT_LOCATION_LONGITUDE = "CURRENT_LOCATION_LONGITUDE"
+    const val USER_COLLECTION_NAME = "USERS"
 
 }

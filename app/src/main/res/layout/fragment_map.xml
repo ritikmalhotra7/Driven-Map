@@ -43,13 +43,26 @@
         app:layout_constraintBottom_toBottomOf="@id/guideline_h_40_60"
         tools:listitem="@layout/added_member_item"/>
     <fragment android:id="@+id/autocomplete_fragment"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/_16dp"
+        android:layout_marginStart="@dimen/_16dp"
+        android:layout_marginEnd="@dimen/_64dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/fragment_map_rv_added_members"
         android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
         />
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fragment_map_bt_start_session"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/start_a_session"
+        app:icon="@drawable/baseline_bike_scooter_24"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="@dimen/_24dp"/>
 
 
 </androidx.constraintlayout.motion.widget.MotionLayout>

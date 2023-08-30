@@ -1,8 +1,8 @@
 package com.example.drivenmap.feat_map.domain.models
 
 import android.graphics.Bitmap
+import com.google.android.gms.maps.model.LatLng
 import com.google.type.DateTime
-import com.google.type.LatLng
 
 data class AddedUser(
     val id:String? = null,

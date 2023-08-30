@@ -17,5 +17,4 @@ object MapModule {
     @Singleton
     fun provideFireStore() = FirebaseFirestore.getInstance()
 
-
 }

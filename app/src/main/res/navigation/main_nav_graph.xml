@@ -3,11 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main_nav_graph.xml"
-    app:startDestination="@id/mapFragment">
+    app:startDestination="@id/loginFragment">
 
     <fragment
         android:id="@+id/mapFragment"
         android:name="com.example.drivenmap.feat_map.presentation.fragments.MapFragment"
         android:label="fragment_map"
         tools:layout="@layout/fragment_map" />
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.drivenmap.feat_login.presentation.fragments.LoginFragment"
+        android:label="fragment_login"
+        tools:layout="@layout/fragment_login" >
+        <action
+            android:id="@+id/action_loginFragment_to_mapFragment"
+            app:destination="@id/mapFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
 </navigation>
