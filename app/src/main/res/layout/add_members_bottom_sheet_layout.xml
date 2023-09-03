@@ -15,6 +15,17 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+    <TextView
+        android:id="@+id/add_members_bottom_sheet_layout_tv_done"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/done"
+        style="@style/textViewWith12dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/add_members_bottom_sheet_layout_v_top_pin"
+        app:layout_constraintBottom_toBottomOf="@id/add_members_bottom_sheet_layout_v_top_pin"
+        android:paddingEnd="@dimen/_16dp"
+        tools:ignore="RtlSymmetry" />
 
     <TextView
         android:id="@+id/add_members_bottom_sheet_layout_tv_you_can_add_upto_6_members"

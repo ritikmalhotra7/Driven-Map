@@ -40,10 +40,10 @@ import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
-import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.toObject
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -59,7 +59,6 @@ class MapFragment : Fragment() {
     @Inject
     lateinit var fireStore: FirebaseFirestore
 
-    private val apiKey = "AIzaSyDPD7o85GIZjzgYhRPp_G-YMVXoseISB9U"
 
     private lateinit var addedMembersAdapter: AddedMembersAdapter
     private lateinit var map: GoogleMap
@@ -127,7 +126,8 @@ class MapFragment : Fragment() {
     }
 
     private fun setViews() {
-        Places.initialize(requireContext().applicationContext, apiKey)
+        addedMembersAdapter = AddedMembersAdapter()
+        /*Places.initialize(requireContext().applicationContext, apiKey)
         val autocompleteFragment =
             childFragmentManager.findFragmentById(R.id.autocomplete_fragment)
                     as AutocompleteSupportFragment
@@ -144,38 +144,48 @@ class MapFragment : Fragment() {
 
             override fun onError(status: Status) {
             }
-        })
-        binding.apply {
-            addedMembersAdapter = AddedMembersAdapter()
-            fragmentMapRvAddedMembers.apply {
-                adapter = addedMembersAdapter.apply {
-                    fireStore.collection(mAuth.currentUser!!.uid).document().get().addOnSuccessListener {
-                        val user = it.toObject(UserModel::class.java)
-                        val addedUserList = user?.addedMembers
-                        setData(
-                            addedUserList?: listOf()
-                        )
-                        setClickListener { addedUser ->
-                            addedUser.currentLocation?.let { currentLocation ->
-                                map.apply {
-                                    animateCamera(
-                                        CameraUpdateFactory.newLatLngZoom(
-                                            currentLocation,
-                                            MAP_ZOOM
-                                        )
-                                    )
-                                }
+        })*/
 
-                            }
-                        }
-                    }.addOnFailureListener {
-                        Log.e("taget",it.toString())
-                    }
-                }
+        binding.apply {
+            fragmentMapRvAddedMembers.apply {
+                adapter = addedMembersAdapter
                 layoutManager = LinearLayoutManager(requireContext())
             }
+            updateViews()
             fragmentMapBtStartSession.setOnClickListener {
                 openBottomSheetForAddingMembers()
+            }
+        }
+    }
+
+    private fun updateViews() {
+        fireStore.collection(USER_COLLECTION_NAME).document(mAuth.currentUser!!.uid).get()
+            .addOnSuccessListener {
+                val user = it!!.toObject(UserModel::class.java)
+                Log.d("taget", user.toString())
+                Log.d("taget", mAuth.currentUser!!.uid)
+                val addedUserList = user?.addedMembers
+                updateRecyclerViewAdapter(addedUserList)
+            }.addOnFailureListener {
+            Log.e("taget", it.toString())
+        }
+    }
+
+    private fun updateRecyclerViewAdapter(addedUserList: List<AddedUser>?) {
+        addedMembersAdapter.setData(
+            addedUserList ?: listOf()
+        )
+        addedMembersAdapter.setClickListener { addedUser ->
+            addedUser.currentLocation?.let { currentLocation ->
+                map.apply {
+                    animateCamera(
+                        CameraUpdateFactory.newLatLngZoom(
+                            currentLocation,
+                            MAP_ZOOM
+                        )
+                    )
+                }
+
             }
         }
     }
@@ -183,7 +193,8 @@ class MapFragment : Fragment() {
     private fun openBottomSheetForAddingMembers() {
         val bottomSheet = BottomSheetDialog(requireContext())
         /*bottomSheet.behavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED*/
-        val binding = AddMembersBottomSheetLayoutBinding.inflate(LayoutInflater.from(requireContext()))
+        val binding =
+            AddMembersBottomSheetLayoutBinding.inflate(LayoutInflater.from(requireContext()))
         val addMemberAdapter = AddMemberBottomSheetAdapter()
         val addedMemberList = arrayListOf<AddedUser>()
         binding.apply {
@@ -201,8 +212,21 @@ class MapFragment : Fragment() {
                     }
                     addMembersBottomSheetLayoutTeitCode.setText("")
                 }.addOnFailureListener {
-                    Log.e("taget-error",it.toString())
+                    Log.e("taget-error", it.toString())
                 }
+            }
+            addMembersBottomSheetLayoutTvDone.setOnClickListener {
+                fireStore.collection(USER_COLLECTION_NAME).document(mAuth.currentUser!!.uid).get()
+                    .addOnSuccessListener {
+                        val user = it.toObject<UserModel>()
+                        Log.d("taget", user.toString())
+                        fireStore.collection(USER_COLLECTION_NAME).document(mAuth.currentUser!!.uid)
+                            .set(user!!.copy(addedMembers = addedMemberList)).addOnSuccessListener {
+                            Log.d("taget", "in success")
+                            updateViews()
+                        }
+                    }
+                bottomSheet.dismiss()
             }
         }
         bottomSheet.setContentView(binding.root)

@@ -13,4 +13,5 @@
     <string name="you_can_add_upto_6_members">You can add upto 6 Members</string>
     <string name="enter_code_to_add_member">Enter code to add member</string>
     <string name="fab_button_to_add_members">fab button to add members</string>
+    <string name="done">Done</string>
 </resources>
