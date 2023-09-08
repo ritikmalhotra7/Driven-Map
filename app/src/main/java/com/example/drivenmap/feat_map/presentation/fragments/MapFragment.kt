@@ -12,11 +12,15 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.drivenmap.MainActivity
 import com.example.drivenmap.R
 import com.example.drivenmap.databinding.AddMembersBottomSheetLayoutBinding
 import com.example.drivenmap.databinding.FragmentMapBinding
@@ -32,19 +36,19 @@ import com.example.drivenmap.feat_map.domain.models.UserModel
 import com.example.drivenmap.feat_map.presentation.adapters.AddMemberBottomSheetAdapter
 import com.example.drivenmap.feat_map.presentation.adapters.AddedMembersAdapter
 import com.example.drivenmap.feat_map.presentation.services.TrackingService
-import com.google.android.gms.common.api.Status
+import com.example.drivenmap.feat_map.presentation.viewmodels.MapFragmentViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.libraries.places.api.Places
-import com.google.android.libraries.places.api.model.Place
-import com.google.android.libraries.places.widget.AutocompleteSupportFragment
-import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.toObject
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -59,6 +63,7 @@ class MapFragment : Fragment() {
     @Inject
     lateinit var fireStore: FirebaseFirestore
 
+    private val viewModel: MapFragmentViewModel by viewModels()
 
     private lateinit var addedMembersAdapter: AddedMembersAdapter
     private lateinit var map: GoogleMap
@@ -127,47 +132,44 @@ class MapFragment : Fragment() {
 
     private fun setViews() {
         addedMembersAdapter = AddedMembersAdapter()
-        /*Places.initialize(requireContext().applicationContext, apiKey)
-        val autocompleteFragment =
-            childFragmentManager.findFragmentById(R.id.autocomplete_fragment)
-                    as AutocompleteSupportFragment
-        autocompleteFragment.setPlaceFields(
-            listOf(
-                Place.Field.ID,
-                Place.Field.NAME,
-                Place.Field.LAT_LNG
-            )
-        )
-        autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
-            override fun onPlaceSelected(place: Place) {
-            }
-
-            override fun onError(status: Status) {
-            }
-        })*/
-
         binding.apply {
             fragmentMapRvAddedMembers.apply {
                 adapter = addedMembersAdapter
                 layoutManager = LinearLayoutManager(requireContext())
             }
-            updateViews()
-            fragmentMapBtStartSession.setOnClickListener {
-                openBottomSheetForAddingMembers()
-            }
         }
-    }
+        lifecycleScope.launch {
+            viewModel.mapScreenState.collectLatest { state ->
+                val isSessionActive = state.isSessionActive
+                val user = state.user
+                val isLoading = state.isLoading
+                val containsError = state.containsError
 
-    private fun updateViews() {
-        fireStore.collection(USER_COLLECTION_NAME).document(mAuth.currentUser!!.uid).get()
-            .addOnSuccessListener {
-                val user = it!!.toObject(UserModel::class.java)
-                Log.d("taget", user.toString())
-                Log.d("taget", mAuth.currentUser!!.uid)
-                val addedUserList = user?.addedMembers
-                updateRecyclerViewAdapter(addedUserList)
-            }.addOnFailureListener {
-            Log.e("taget", it.toString())
+                isLoading?.let{
+                    if(it){
+                        showProgress()
+                    }else{
+                        hideProgress()
+                    }
+                }
+                containsError?.let{
+                    Snackbar.make(binding.root,it,Snackbar.LENGTH_SHORT).apply {
+                        animationMode = Snackbar.ANIMATION_MODE_SLIDE
+                    }.show()
+                }
+                isSessionActive?.let{
+                    if(it){
+                        user?.let{
+                            updateRecyclerViewAdapter(user.addedMembers)
+                        }
+                    }
+                }
+                user?.let{
+                    binding.fragmentMapBtStartSession.setOnClickListener {
+                        openBottomSheetForAddingMembers(user)
+                    }
+                }
+            }
         }
     }
 
@@ -190,7 +192,7 @@ class MapFragment : Fragment() {
         }
     }
 
-    private fun openBottomSheetForAddingMembers() {
+    private fun openBottomSheetForAddingMembers(user:UserModel) {
         val bottomSheet = BottomSheetDialog(requireContext())
         /*bottomSheet.behavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED*/
         val binding =
@@ -204,6 +206,7 @@ class MapFragment : Fragment() {
             }
             addMembersBottomSheetLayoutFabAddMember.setOnClickListener {
                 val code = addMembersBottomSheetLayoutTeitCode.text.toString()
+
                 fireStore.collection(USER_COLLECTION_NAME).document(code).get().addOnSuccessListener {
                     val user = it.toObject(UserModel::class.java)
                     addedMemberList.add(user!!.toAddedUser())
@@ -216,16 +219,16 @@ class MapFragment : Fragment() {
                 }
             }
             addMembersBottomSheetLayoutTvDone.setOnClickListener {
-                fireStore.collection(USER_COLLECTION_NAME).document(mAuth.currentUser!!.uid).get()
+                /*fireStore.collection(USER_COLLECTION_NAME).document(mAuth.currentUser!!.uid).get()
                     .addOnSuccessListener {
                         val user = it.toObject<UserModel>()
                         Log.d("taget", user.toString())
                         fireStore.collection(USER_COLLECTION_NAME).document(mAuth.currentUser!!.uid)
                             .set(user!!.copy(addedMembers = addedMemberList)).addOnSuccessListener {
                             Log.d("taget", "in success")
-                            updateViews()
                         }
-                    }
+                    }*/
+                viewModel.onEvent(MapFragmentViewModel.MapScreenEvents.StartSession(user.copy(addedMembers = addedMemberList)))
                 bottomSheet.dismiss()
             }
         }
@@ -255,6 +258,13 @@ class MapFragment : Fragment() {
         override fun onReceive(p0: Context?, p1: Intent?) {
             permissionManager.showDialogIfLocationIsNotEnable(this@MapFragment)
         }
+    }
+    private fun showProgress() {
+        (requireActivity() as MainActivity).showProgressBar()
+    }
+
+    private fun hideProgress() {
+        (requireActivity() as MainActivity).hideProgressBar()
     }
 
     override fun onResume() {
