@@ -30,6 +30,9 @@ class AddMemberBottomSheetAdapter: RecyclerView.Adapter<AddMemberBottomSheetAdap
     inner class ViewHolder(private val binding: MemberCardItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun setData(item: AddedUser, position: Int) {
+            if(position==0){
+                binding.root.isEnabled = false
+            }
             binding.apply {
                 item.apply {
                     profilePhoto.let{

@@ -72,11 +72,14 @@ class LoginFragment : Fragment() {
                                 id = user.uid,
                                 name = user.displayName ?: "Name not given",
                                 phoneNumber = user.phoneNumber,
-                                email = user.email
+                                email = user.email,
+                                profilePhoto = user.photoUrl.toString()
                             )
                         ).addOnSuccessListener {
                             findNavController().popBackStack()
                             findNavController().navigate(R.id.mapFragment)
+                        }.addOnFailureListener {
+                            Log.d("taget", it.toString())
                         }
                     }.addOnFailureListener {
                         Log.d("taget", it.toString())

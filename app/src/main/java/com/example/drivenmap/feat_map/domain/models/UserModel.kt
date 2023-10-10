@@ -1,6 +1,7 @@
 package com.example.drivenmap.feat_map.domain.models
 
 import android.graphics.Bitmap
+import android.net.Uri
 import com.google.android.gms.maps.model.LatLng
 import com.google.type.DateTime
 import java.time.LocalDateTime
@@ -13,7 +14,7 @@ data class UserModel(
     val email:String? = null,
     val isActive:Boolean = false,
     val activeTimeStarted:Calendar? = null,
-    val currentLocation: LatLng? = null,
+    val currentLocation: Location? = null,
     val addedMembers:List<AddedUser> = listOf(),
-    val profilePhoto: Bitmap? = null
+    val profilePhoto: String? = null
 )

@@ -4,4 +4,9 @@
         <!-- Customize your dark theme here. -->
         <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
     </style>
+    <style name="textViewWith12dp" parent="android:style/Widget.TextView">
+        <item name="android:textSize">12dp</item>
+        <item name="fontFamily">@font/jetbrainsmono_regular</item>
+        <item name="android:textColor">@color/color_7FBBBC</item>
+    </style>
 </resources>

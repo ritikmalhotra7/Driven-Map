@@ -6,21 +6,20 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
-import com.example.drivenmap.feat_core.utils.Utils
 import com.example.drivenmap.feat_core.utils.Utils.CURRENT_LOCATION_LATITUDE
 import com.example.drivenmap.feat_core.utils.Utils.CURRENT_LOCATION_LONGITUDE
 import com.example.drivenmap.feat_core.utils.Utils.FASTEST_LOCATION_INTERVAL
 import com.example.drivenmap.feat_core.utils.Utils.LOCATION_UPDATES
 import com.example.drivenmap.feat_core.utils.Utils.LOCATION_UPDATE_INTERVAL
+import com.example.drivenmap.feat_core.utils.Utils.USER_COLLECTION_NAME
+import com.example.drivenmap.feat_map.domain.models.AddedUser
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.maps.model.PolylineOptions
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -46,11 +45,15 @@ class TrackingService : Service() {
         return START_STICKY
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+    }
+
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(p0: LocationResult) {
             super.onLocationResult(p0)
-            Log.d("taget",p0.toString())
+            Log.d("taget", p0.toString())
             val location = p0.lastLocation
             val latLng = LatLng(location.latitude, location.longitude)
             val intent = Intent(LOCATION_UPDATES).apply {

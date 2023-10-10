@@ -1,6 +1,7 @@
 package com.example.drivenmap.feat_map.domain.models
 
 import android.graphics.Bitmap
+import android.net.Uri
 import com.google.android.gms.maps.model.LatLng
 import com.google.type.DateTime
 import java.time.LocalDateTime
@@ -13,8 +14,8 @@ data class AddedUser(
     val email:String? = null,
     val isActive:Boolean = false,
     val activeTimeStarted: Calendar? = null,
-    val currentLocation: LatLng? = null,
-    val profilePhoto:Bitmap? = null,
+    val currentLocation: Location? = null,
+    val profilePhoto: String? = null,
     val distanceAway:String? = null
 ){
     override fun toString(): String {

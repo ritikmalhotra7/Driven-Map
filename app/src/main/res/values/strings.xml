@@ -14,4 +14,6 @@
     <string name="enter_code_to_add_member">Enter code to add member</string>
     <string name="fab_button_to_add_members">fab button to add members</string>
     <string name="done">Done</string>
+    <string name="stop_this_session">Stop this session</string>
+    <string name="added_members">Added Members</string>
 </resources>

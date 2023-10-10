@@ -28,15 +28,16 @@ class AddedMembersAdapter:RecyclerView.Adapter<AddedMembersAdapter.ViewHolder>()
     fun setData(list:List<AddedUser>){
         differ.submitList(list)
     }
+    fun getList(): MutableList<AddedUser> = differ.currentList
     inner class ViewHolder(private val binding:AddedMemberItemBinding):RecyclerView.ViewHolder(binding.root) {
         fun setData(item: AddedUser, position: Int) {
             binding.apply {
                 item.apply {
-                    addedMemberItemIvDisplayPhoto.load(R.drawable.baseline_person_pin_24){
+                    addedMemberItemIvDisplayPhoto.load(item.profilePhoto){
                         placeholder(R.drawable.baseline_person_pin_24)
                         transformations(CircleCropTransformation())
                     }
-                    addedMemberItemTvDistanceAway.text = distanceAway
+                    addedMemberItemTvDistanceAway.text = distanceAway?:"1.2 KM"
                     root.setOnClickListener {
                         clickListener?.let{
                             it(item)

@@ -61,6 +61,15 @@
         app:icon="@drawable/baseline_bike_scooter_24"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/guideline_v_70_30"
+        android:layout_marginBottom="@dimen/_24dp"/>
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fragment_map_bt_qr"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/baseline_qr_code_24"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="@id/guideline_v_70_30"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginBottom="@dimen/_24dp"/>
 

@@ -1,23 +1,20 @@
 package com.example.drivenmap.feat_map.presentation.viewmodels
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.drivenmap.feat_core.utils.ResponseState
 import com.example.drivenmap.feat_core.utils.Utils.USER_COLLECTION_NAME
+import com.example.drivenmap.feat_map.domain.models.AddedUser
+import com.example.drivenmap.feat_map.domain.models.Location
 import com.example.drivenmap.feat_map.domain.models.UserModel
 import com.example.drivenmap.feat_map.domain.usecases.GetUserData
 import com.example.drivenmap.feat_map.domain.usecases.SetUserData
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
-import java.util.Calendar
 import javax.inject.Inject
 
 @HiltViewModel
@@ -28,6 +25,7 @@ class MapFragmentViewModel @Inject constructor(
 ) : ViewModel() {
 
     val mapScreenState = MutableStateFlow(MapScreenState())
+    var currentUser = UserModel()
 
     init {
         mAuth.currentUser?.let{currentUser ->
@@ -46,6 +44,8 @@ class MapFragmentViewModel @Inject constructor(
     sealed class MapScreenEvents {
         data class OnRefresh(val document: String) : MapScreenEvents()
         data class StartSession(val userWhoStartedThisSession: UserModel) : MapScreenEvents()
+        data class UpdateAddedMemberList(val user:UserModel, val addedMembers:List<AddedUser>): MapScreenEvents()
+        data class UpdateCurrentLocation(val user:UserModel, val currentLocation:Location): MapScreenEvents()
         data class StopTheRunningSession(val userWhoStartedThisSession: UserModel) : MapScreenEvents()
     }
 
@@ -59,42 +59,49 @@ class MapFragmentViewModel @Inject constructor(
                 startSession(mapEvent.userWhoStartedThisSession)
             }
 
+            is MapScreenEvents.UpdateAddedMemberList -> {
+                updateMemberList(mapEvent.user, mapEvent.addedMembers)
+            }
+            is MapScreenEvents.UpdateCurrentLocation -> {
+                updateCurrentLocation(mapEvent.user, mapEvent.currentLocation)
+            }
             is MapScreenEvents.StopTheRunningSession -> {
                 stopTheSession(mapEvent.userWhoStartedThisSession)
             }
         }
     }
-    fun getUserData(document:String): Flow<UserModel> {
-        val userData = MutableStateFlow(UserModel())
-        viewModelScope.launch (Dispatchers.IO){
-            getUserDataUc(USER_COLLECTION_NAME,document).collectLatest {
-                userData.emit(it.data!!)
-            }
+    private fun updateCurrentLocation(user: UserModel, currentLocation: Location) {
+        updatingMapScreenStateAfterSettingUserData(user.copy(currentLocation = currentLocation)){
+            updateMapScreenStateAccToUserData(user.id.toString()){}
         }
-        return userData
+    }
+
+    private fun updateMemberList(user:UserModel, addedMembers: List<AddedUser>) {
+        updatingMapScreenStateAfterSettingUserData(user.copy(addedMembers = addedMembers)){
+            updateMapScreenStateAccToUserData(user.id.toString()){}
+        }
     }
 
     private fun startSession(user: UserModel) {
-        updatingMapScreenStateAfterSettingUserData(user.id.toString(),user.copy(isActive = true)){
+        updatingMapScreenStateAfterSettingUserData(user.copy(isActive = true)){
             viewModelScope.launch { mapScreenState.emit(mapScreenState.value.copy(isSessionActive = true))}
             updateMapScreenStateAccToUserData(user.id.toString()){}
         }
     }
     private fun stopTheSession(user:UserModel){
-        updatingMapScreenStateAfterSettingUserData(user.id.toString(),user.copy(isActive = false)){
+        updatingMapScreenStateAfterSettingUserData(user.copy(isActive = false)){
             viewModelScope.launch { mapScreenState.emit(mapScreenState.value.copy(isSessionActive = false))}
             updateMapScreenStateAccToUserData(user.id.toString()){}
         }
-
     }
 
+    // function to set
     private fun updatingMapScreenStateAfterSettingUserData(
-        documentName: String,
         data: UserModel,
         onSuccess:(()->Unit)?
     ) = viewModelScope.launch(Dispatchers.IO) {
-        setUserDataUc(USER_COLLECTION_NAME, documentName, data).collectLatest { userResponseState ->
-            when (userResponseState) {
+        setUserDataUc(USER_COLLECTION_NAME, data.id!!, data).collectLatest { userResponseState ->
+            when (userResponseState){
                 is ResponseState.Success -> {
                     mapScreenState.emit(
                         mapScreenState.value.copy(
@@ -128,6 +135,7 @@ class MapFragmentViewModel @Inject constructor(
         }
     }
 
+    //function to get
     private fun updateMapScreenStateAccToUserData(
         documentName: String,
         onSuccess:(()->Unit)?
@@ -144,6 +152,7 @@ class MapFragmentViewModel @Inject constructor(
                                     containsError = null
                                 )
                             )
+                            currentUser = user
                             onSuccess?.let{
                                 it()
                             }
