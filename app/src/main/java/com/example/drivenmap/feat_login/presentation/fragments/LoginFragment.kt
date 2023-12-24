@@ -86,6 +86,7 @@ class LoginFragment : Fragment() {
                     }
                 }
             } else {
+                Log.d("taget",result.resultCode.toString())
                 Toast.makeText(
                     requireContext(),
                     requireContext().getString(R.string.something_went_wrong_with_google_signing),

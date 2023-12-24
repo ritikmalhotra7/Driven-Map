@@ -35,9 +35,6 @@ class AddMemberBottomSheetAdapter: RecyclerView.Adapter<AddMemberBottomSheetAdap
             }
             binding.apply {
                 item.apply {
-                    profilePhoto.let{
-                        memberCardItemIvDisplayPhoto.load(it)
-                    }
                     memberCardItemTvName.text = name
                     root.setOnClickListener {
                         differ.submitList(differ.currentList.filter { it != item })

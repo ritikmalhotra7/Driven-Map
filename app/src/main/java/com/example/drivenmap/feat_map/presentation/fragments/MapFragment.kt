@@ -6,10 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Path
 import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
@@ -54,7 +51,6 @@ import com.example.drivenmap.feat_map.presentation.services.TrackingService
 import com.example.drivenmap.feat_map.presentation.viewmodels.MapFragmentViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
@@ -66,9 +62,11 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -77,8 +75,10 @@ class MapFragment : Fragment() {
     private val binding by lazy {
         _binding!!
     }
+
     @Inject
     lateinit var mAuth: FirebaseAuth
+
     @Inject
     lateinit var fireStore: FirebaseFirestore
 
@@ -93,7 +93,7 @@ class MapFragment : Fragment() {
     private lateinit var permissionManager: PermissionManager
     private var codeScanner: CodeScanner? = null
     private var marker: Marker? = null
-    private var currentUser: UserModel?= null
+    private var currentUser: UserModel? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -124,16 +124,25 @@ class MapFragment : Fragment() {
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
             when {
-                permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> { setViews() }
-                permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> { Log.d("taget", "coarse") }
-                else -> { Log.d("taget", "no permissions") }
+                permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
+                    setViews()
+                }
+                permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
+                    Log.d("taget", "coarse")
+                }
+                else -> {
+                    Log.d("taget", "no permissions")
+                }
             }
         }
         val backgroundPermLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { isGranted ->
-            if (isGranted) { Log.d("taget", "background-location") }
-            else { Log.d("taget", "no permissions") }
+            if (isGranted) {
+                Log.d("taget", "background-location")
+            } else {
+                Log.d("taget", "no permissions")
+            }
         }
         permissionManager =
             PermissionManager(this, foregroundPermLauncher, backgroundPermLauncher) {
@@ -152,7 +161,7 @@ class MapFragment : Fragment() {
         lifecycleScope.launch {
             viewModel.mapScreenState.collectLatest { state ->
                 val isSessionActive = state.isSessionActive
-                val user = state.user
+                val user = state.currentUser
                 val isLoading = state.isLoading
                 val containsError = state.containsError
 
@@ -169,12 +178,15 @@ class MapFragment : Fragment() {
                     }.show()
                 }
                 isSessionActive?.let {
+                    Log.d("taget-active",it.toString())
+                    Log.d("taget-active",user.toString())
                     if (it) {
-                        binding.fragmentMapBtStartSession.text = getString(R.string.stop_this_session)
+                        binding.fragmentMapBtStartSession.text =
+                            getString(R.string.stop_this_session)
                         user?.let {
                             updateRecyclerViewAdapter(user.addedMembers.distinctBy { it.id })
                         }
-                    }else{
+                    } else {
                         binding.fragmentMapBtStartSession.text = getString(R.string.start_a_session)
                         updateRecyclerViewAdapter(listOf())
                     }
@@ -224,18 +236,18 @@ class MapFragment : Fragment() {
         }
     }
 
-    private fun openBottomSheetForGeneratedQR(){
+    private fun openBottomSheetForGeneratedQR() {
         val bottomSheet = BottomSheetDialog(requireContext())
         /*bottomSheet.behavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED*/
         val binding =
             AddMembersBottomSheetGeneratedQrBinding.inflate(LayoutInflater.from(requireContext()))
-        mAuth.currentUser?.uid?.let{ uid->
+        mAuth.currentUser?.uid?.let { uid ->
             val qrgEncoder = QRGEncoder(uid, null, QRGContents.Type.TEXT, 1000).apply {
                 colorBlack = Color.WHITE
                 colorWhite = Color.BLACK
             }
             binding.addMembersBottomSheetGeneratedQrIvQr.load(qrgEncoder.bitmap) {
-                transformations(RoundedCornersTransformation(32f,32f,32f,32f))
+                transformations(RoundedCornersTransformation(32f, 32f, 32f, 32f))
             }
         }
         bottomSheet.setContentView(binding.root)
@@ -250,7 +262,8 @@ class MapFragment : Fragment() {
         val binding =
             AddMembersBottomSheetLayoutBinding.inflate(LayoutInflater.from(requireContext()))
         val addMemberAdapter = AddMemberBottomSheetAdapter()
-        val addedMemberList = arrayListOf<AddedUser>()
+        var addedMemberList = arrayListOf<AddedUser>()
+        var jobForCollectingData : Job? = null
         if (codeScanner == null) {
             codeScanner =
                 CodeScanner(requireContext(), binding.addMembersBottomSheetLayoutCsv).apply {
@@ -261,13 +274,7 @@ class MapFragment : Fragment() {
                     isAutoFocusEnabled = true // Whether to enable auto focus or not
                     isFlashEnabled = false // Whether to enable flash or not
                 }
-        }
-        userDoc(mAuth.currentUser!!.uid).get().addOnSuccessListener { documentSnap ->
-            //Adding current user to addedMemberList
-            val currentUser = documentSnap.toObject(UserModel::class.java)
-            currentUser?.let {
-                addedMemberList.add(it.toAddedUser())
-            }
+            viewModel.onEvent(MapFragmentViewModel.MapScreenEvents.StartSession)
         }
         binding.apply {
             codeScanner?.startPreview()
@@ -276,26 +283,36 @@ class MapFragment : Fragment() {
             }
             codeScanner?.decodeCallback = DecodeCallback { result ->
                 val code = result.toString()
-                fireStore.collection(USER_COLLECTION_NAME).document(code).get()
-                    .addOnSuccessListener {
-                        val user = it.toObject(UserModel::class.java)
-                        user?.let {
-                            if (user.isActive) {
-                                Toast.makeText(
-                                    requireContext(),
-                                    "User is already in a session",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                viewModel.onEvent(MapFragmentViewModel.MapScreenEvents.AddMemberToSession(code))
+                jobForCollectingData = lifecycleScope.launch {
+                    viewModel.mapScreenState.collectLatest { state ->
+                        val isSessionActive = state.isSessionActive
+                        val user = state.currentUser
+                        val isLoading = state.isLoading
+                        val containsError = state.containsError
+
+                        isLoading?.let {
+                            if (it) {
+                                showProgress()
                             } else {
-                                addedMemberList.add(user!!.toAddedUser())
-                                addMemberAdapter.apply {
-                                    setData(addedMemberList)
-                                }
+                                hideProgress()
                             }
                         }
-                    }.addOnFailureListener {
-                        Log.e("taget-error", it.toString())
+                        containsError?.let {
+                            Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).apply {
+                                animationMode = Snackbar.ANIMATION_MODE_SLIDE
+                            }.show()
+                        }
+
+                        user?.addedMembers?.let {
+                            Log.d("taget",user.toString())
+                            addedMemberList = it
+                            addMemberAdapter.apply {
+                                setData(addedMemberList)
+                            }
+                        }
                     }
+                }
             }
             codeScanner?.errorCallback = ErrorCallback {
                 runBlocking {
@@ -311,29 +328,10 @@ class MapFragment : Fragment() {
                     GridLayoutManager(this.context, 2, GridLayoutManager.HORIZONTAL, false)
             }
             addMembersBottomSheetLayoutTvDone.setOnClickListener {
-                //for all added member in a group you must add all the addedMembers except itself
-                addedMemberList.forEach { addedUser ->
-                    addedUser.id?.let {
-                        userDoc(addedUser.id).update(
-                            "addedMembers",
-                            addedMemberList.filterNot { it.id == addedUser.id })
-                    }
-                }
-                //starting session using viewModel
-                mAuth.currentUser?.let { firebaseUser ->
-                    userDoc(firebaseUser.uid).get().addOnSuccessListener { documentSnap ->
-                        val currentUser = documentSnap.toObject(UserModel::class.java)
-                        currentUser?.let {
-                            viewModel.onEvent(
-                                MapFragmentViewModel.MapScreenEvents.StartSession(
-                                    currentUser
-                                )
-                            )
-                            bottomSheet.dismiss()
-                        }
-                    }
-                }
+                bottomSheet.dismiss()
+                jobForCollectingData?.cancel()
             }
+
         }
         bottomSheet.setOnDismissListener {
             codeScanner?.releaseResources()
@@ -362,17 +360,18 @@ class MapFragment : Fragment() {
                 isMyLocationEnabled = true
             }
             //update the current location in firestore
-            val tempCurrentLoc = Location(latitude = newLocation.latitude, longitude = newLocation.longitude)
+            val tempCurrentLoc =
+                Location(latitude = newLocation.latitude, longitude = newLocation.longitude)
             /*currentUser?.let{
                 viewModel.onEvent(MapFragmentViewModel.MapScreenEvents.UpdateCurrentLocation(it,tempCurrentLoc))
             }*/
-            userDoc(mAuth.currentUser!!.uid).update("currentLocation",tempCurrentLoc)
+            userDoc(mAuth.currentUser!!.uid).update("currentLocation", tempCurrentLoc)
             currentLocation = tempCurrentLoc
 
             //updating every added member from firestore
             val addedMembers = addedMembersAdapter.getList().toMutableList()
             val updatedAddedMembers = addedMembers
-            addedMembers.forEach { addedUser->
+            addedMembers.forEach { addedUser ->
                 userDoc(addedUser.id!!).get().addOnSuccessListener {
                     val user = it.toObject(UserModel::class.java)
                     updatedAddedMembers.remove(addedUser)

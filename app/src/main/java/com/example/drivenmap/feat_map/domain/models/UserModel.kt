@@ -13,8 +13,9 @@ data class UserModel(
     val phoneNumber:String? = null,
     val email:String? = null,
     val isActive:Boolean = false,
-    val activeTimeStarted:Calendar? = null,
+    val isHost:Boolean? = null,
     val currentLocation: Location? = null,
-    val addedMembers:List<AddedUser> = listOf(),
+    val addedMembers:ArrayList<AddedUser> = arrayListOf(),
     val profilePhoto: String? = null
 )
+
