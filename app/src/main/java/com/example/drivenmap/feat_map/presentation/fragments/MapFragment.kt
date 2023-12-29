@@ -36,12 +36,11 @@ import com.example.drivenmap.databinding.AddMembersBottomSheetGeneratedQrBinding
 import com.example.drivenmap.databinding.AddMembersBottomSheetLayoutBinding
 import com.example.drivenmap.databinding.FragmentMapBinding
 import com.example.drivenmap.feat_core.utils.PermissionManager
+import com.example.drivenmap.feat_core.utils.ResponseState
 import com.example.drivenmap.feat_core.utils.Utils.CURRENT_LOCATION_LATITUDE
 import com.example.drivenmap.feat_core.utils.Utils.CURRENT_LOCATION_LONGITUDE
 import com.example.drivenmap.feat_core.utils.Utils.LOCATION_UPDATES
 import com.example.drivenmap.feat_core.utils.Utils.MAP_ZOOM
-import com.example.drivenmap.feat_core.utils.Utils.USER_COLLECTION_NAME
-import com.example.drivenmap.feat_map.data.mappers.toAddedUser
 import com.example.drivenmap.feat_map.domain.models.AddedUser
 import com.example.drivenmap.feat_map.domain.models.Location
 import com.example.drivenmap.feat_map.domain.models.UserModel
@@ -59,14 +58,10 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -75,7 +70,6 @@ class MapFragment : Fragment() {
     private val binding by lazy {
         _binding!!
     }
-
     @Inject
     lateinit var mAuth: FirebaseAuth
 
@@ -89,11 +83,13 @@ class MapFragment : Fragment() {
     private lateinit var map: GoogleMap
 
     private var currentLocation: Location? = null
+
     private lateinit var serviceIntent: Intent
     private lateinit var permissionManager: PermissionManager
     private var codeScanner: CodeScanner? = null
     private var marker: Marker? = null
     private var currentUser: UserModel? = null
+    private var bottomSheetForQR: BottomSheetDialog? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -127,9 +123,11 @@ class MapFragment : Fragment() {
                 permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
                     setViews()
                 }
+
                 permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
                     Log.d("taget", "coarse")
                 }
+
                 else -> {
                     Log.d("taget", "no permissions")
                 }
@@ -159,45 +157,61 @@ class MapFragment : Fragment() {
             }
         }
         lifecycleScope.launch {
-            viewModel.mapScreenState.collectLatest { state ->
-                val isSessionActive = state.isSessionActive
-                val user = state.currentUser
-                val isLoading = state.isLoading
-                val containsError = state.containsError
+            viewModel.userLiveData.observe(viewLifecycleOwner) { it ->
+                when (it) {
+                    is ResponseState.Success -> {
+                        it.data?.let { user ->
+                            binding.apply {
+                                user.active?.let { isActive ->
+                                    if (isActive) {
+                                        fragmentMapBtStartSession.text =
+                                            getString(R.string.stop_this_session)
+                                        updateRecyclerViewAdapter(user.addedMembers.distinctBy { it.id })
+                                        fragmentMapBtQr.visibility = View.GONE
+                                        bottomSheetForQR?.let{
+                                            if (it.isShowing) {
+                                                it.dismiss()
+                                            }
+                                        }
+                                        fragmentMapBtStartSession.setOnClickListener {
+                                            val addedMemberIds :List<String> = user.addedMembers.map { it.id!! }.toMutableList().apply {
+                                                add(user.id!!)
+                                            }
+                                            viewModel.stopSession(addedMemberIds)
+                                            viewModel.stopSessionResult.observe(viewLifecycleOwner){
+                                                if(it.javaClass == ResponseState.Success::class.java){
+                                                    Toast.makeText(requireContext(),"Stopped Session",Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        fragmentMapBtStartSession.text =
+                                            getString(R.string.start_a_session)
+                                        updateRecyclerViewAdapter(listOf())
+                                        fragmentMapBtStartSession.setOnClickListener {
+                                            openBottomSheetForAddingMembers()
+                                        }
+                                        fragmentMapBtQr.visibility = View.VISIBLE
+                                        fragmentMapBtQr.setOnClickListener {
+                                            openBottomSheetForGeneratedQR()
+                                        }
+                                    }
+                                }
+                            }
+                            hideProgress()
+                        }
+                    }
 
-                isLoading?.let {
-                    if (it) {
-                        showProgress()
-                    } else {
+                    is ResponseState.Error -> {
+                        Snackbar.make(binding.root, it.message.toString(), Snackbar.LENGTH_SHORT)
+                            .apply {
+                                animationMode = Snackbar.ANIMATION_MODE_SLIDE
+                            }.show()
                         hideProgress()
                     }
-                }
-                containsError?.let {
-                    Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).apply {
-                        animationMode = Snackbar.ANIMATION_MODE_SLIDE
-                    }.show()
-                }
-                isSessionActive?.let {
-                    Log.d("taget-active",it.toString())
-                    Log.d("taget-active",user.toString())
-                    if (it) {
-                        binding.fragmentMapBtStartSession.text =
-                            getString(R.string.stop_this_session)
-                        user?.let {
-                            updateRecyclerViewAdapter(user.addedMembers.distinctBy { it.id })
-                        }
-                    } else {
-                        binding.fragmentMapBtStartSession.text = getString(R.string.start_a_session)
-                        updateRecyclerViewAdapter(listOf())
-                    }
-                }
-                user?.let {
-                    currentUser = user
-                    binding.fragmentMapBtStartSession.setOnClickListener {
-                        openBottomSheetForAddingMembers()
-                    }
-                    binding.fragmentMapBtQr.setOnClickListener {
-                        openBottomSheetForGeneratedQR()
+
+                    is ResponseState.Loading -> {
+                        showProgress()
                     }
                 }
             }
@@ -237,7 +251,7 @@ class MapFragment : Fragment() {
     }
 
     private fun openBottomSheetForGeneratedQR() {
-        val bottomSheet = BottomSheetDialog(requireContext())
+        bottomSheetForQR = BottomSheetDialog(requireContext())
         /*bottomSheet.behavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED*/
         val binding =
             AddMembersBottomSheetGeneratedQrBinding.inflate(LayoutInflater.from(requireContext()))
@@ -250,9 +264,9 @@ class MapFragment : Fragment() {
                 transformations(RoundedCornersTransformation(32f, 32f, 32f, 32f))
             }
         }
-        bottomSheet.setContentView(binding.root)
-        if (!bottomSheet.isShowing) {
-            bottomSheet.show()
+        bottomSheetForQR!!.setContentView(binding.root)
+        if (!bottomSheetForQR!!.isShowing) {
+            bottomSheetForQR!!.show()
         }
     }
 
@@ -262,8 +276,8 @@ class MapFragment : Fragment() {
         val binding =
             AddMembersBottomSheetLayoutBinding.inflate(LayoutInflater.from(requireContext()))
         val addMemberAdapter = AddMemberBottomSheetAdapter()
-        var addedMemberList = arrayListOf<AddedUser>()
-        var jobForCollectingData : Job? = null
+        val addedMemberList = arrayListOf<String>()
+        addedMemberList.add(mAuth.currentUser!!.uid)
         if (codeScanner == null) {
             codeScanner =
                 CodeScanner(requireContext(), binding.addMembersBottomSheetLayoutCsv).apply {
@@ -274,7 +288,6 @@ class MapFragment : Fragment() {
                     isAutoFocusEnabled = true // Whether to enable auto focus or not
                     isFlashEnabled = false // Whether to enable flash or not
                 }
-            viewModel.onEvent(MapFragmentViewModel.MapScreenEvents.StartSession)
         }
         binding.apply {
             codeScanner?.startPreview()
@@ -283,33 +296,13 @@ class MapFragment : Fragment() {
             }
             codeScanner?.decodeCallback = DecodeCallback { result ->
                 val code = result.toString()
-                viewModel.onEvent(MapFragmentViewModel.MapScreenEvents.AddMemberToSession(code))
-                jobForCollectingData = lifecycleScope.launch {
-                    viewModel.mapScreenState.collectLatest { state ->
-                        val isSessionActive = state.isSessionActive
-                        val user = state.currentUser
-                        val isLoading = state.isLoading
-                        val containsError = state.containsError
-
-                        isLoading?.let {
-                            if (it) {
-                                showProgress()
-                            } else {
-                                hideProgress()
-                            }
-                        }
-                        containsError?.let {
-                            Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).apply {
-                                animationMode = Snackbar.ANIMATION_MODE_SLIDE
-                            }.show()
-                        }
-
-                        user?.addedMembers?.let {
-                            Log.d("taget",user.toString())
-                            addedMemberList = it
-                            addMemberAdapter.apply {
-                                setData(addedMemberList)
-                            }
+                lifecycleScope.launch {
+                    if (!addedMemberList.contains(code)) addedMemberList.add(code)
+                    addMemberAdapter.apply {
+                        setData(addedMemberList.filterNot { it == mAuth.currentUser?.uid }
+                            .map { AddedUser(it, name = "Ritik", currentLocation = null) })
+                        setClickListener {
+                            addedMemberList.remove(it.id)
                         }
                     }
                 }
@@ -328,8 +321,34 @@ class MapFragment : Fragment() {
                     GridLayoutManager(this.context, 2, GridLayoutManager.HORIZONTAL, false)
             }
             addMembersBottomSheetLayoutTvDone.setOnClickListener {
-                bottomSheet.dismiss()
-                jobForCollectingData?.cancel()
+                if(addedMemberList.size>1){
+                    viewModel.addMembers(addedMemberList)
+                    viewModel.addedMembersResult.observe(viewLifecycleOwner) {
+                        when (it) {
+                            is ResponseState.Success -> {
+                                bottomSheet.dismiss()
+                                viewModel.getUser()
+                                Toast.makeText(requireContext(),"Started Session",Toast.LENGTH_SHORT).show()
+                                hideProgress()
+                            }
+
+                            is ResponseState.Error -> {
+                                Snackbar.make(
+                                    binding.root,
+                                    it.message.toString(),
+                                    Snackbar.LENGTH_SHORT
+                                ).apply {
+                                    animationMode = Snackbar.ANIMATION_MODE_SLIDE
+                                }.show()
+                                hideProgress()
+                            }
+
+                            is ResponseState.Loading -> {
+                                showProgress()
+                            }
+                        }
+                    }
+                }
             }
 
         }
@@ -340,10 +359,6 @@ class MapFragment : Fragment() {
         if (!bottomSheet.isShowing) {
             bottomSheet.show()
         }
-    }
-
-    private fun userDoc(document: String): DocumentReference {
-        return fireStore.collection(USER_COLLECTION_NAME).document(document)
     }
 
     private val updateLocation = object : BroadcastReceiver() {
@@ -362,13 +377,29 @@ class MapFragment : Fragment() {
             //update the current location in firestore
             val tempCurrentLoc =
                 Location(latitude = newLocation.latitude, longitude = newLocation.longitude)
-            /*currentUser?.let{
-                viewModel.onEvent(MapFragmentViewModel.MapScreenEvents.UpdateCurrentLocation(it,tempCurrentLoc))
-            }*/
-            userDoc(mAuth.currentUser!!.uid).update("currentLocation", tempCurrentLoc)
             currentLocation = tempCurrentLoc
+            viewModel.currentLocationUpdate(tempCurrentLoc)
+            viewModel.locationUpdateResult.observe(viewLifecycleOwner){
+                when (it) {
+                    is ResponseState.Success -> {
+                    }
 
-            //updating every added member from firestore
+                    is ResponseState.Error -> {
+                        Snackbar.make(
+                            binding.root,
+                            it.message.toString(),
+                            Snackbar.LENGTH_SHORT
+                        ).apply {
+                            animationMode = Snackbar.ANIMATION_MODE_SLIDE
+                        }.show()
+                    }
+
+                    is ResponseState.Loading -> {
+                    }
+                }
+            }
+
+            /*//updating every added member from firestore
             val addedMembers = addedMembersAdapter.getList().toMutableList()
             val updatedAddedMembers = addedMembers
             addedMembers.forEach { addedUser ->
@@ -377,7 +408,7 @@ class MapFragment : Fragment() {
                     updatedAddedMembers.remove(addedUser)
                     updatedAddedMembers.add(user!!.toAddedUser())
                 }
-            }
+            }*/
 
         }
     }

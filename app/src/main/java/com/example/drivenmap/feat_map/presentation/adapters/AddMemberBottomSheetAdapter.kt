@@ -5,7 +5,6 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import coil.load
 import com.example.drivenmap.databinding.MemberCardItemBinding
 import com.example.drivenmap.feat_map.domain.models.AddedUser
 
@@ -30,14 +29,12 @@ class AddMemberBottomSheetAdapter: RecyclerView.Adapter<AddMemberBottomSheetAdap
     inner class ViewHolder(private val binding: MemberCardItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun setData(item: AddedUser, position: Int) {
-            if(position==0){
-                binding.root.isEnabled = false
-            }
             binding.apply {
                 item.apply {
                     memberCardItemTvName.text = name
                     root.setOnClickListener {
                         differ.submitList(differ.currentList.filter { it != item })
+                        clickListener?.let { it1 -> it1(item) }
                     }
                 }
             }

@@ -65,16 +65,17 @@ class LoginFragment : Fragment() {
                             null
                         )
                     ).addOnSuccessListener {
-                        val user = it.user
-                        val doc = fireStore.collection(USER_COLLECTION_NAME).document(user!!.uid)
+                        val user = it.user!!
+                        val userModel = UserModel(
+                            id = user.uid,
+                            name = user.displayName ?: "Name not given",
+                            phoneNumber = user.phoneNumber,
+                            email = user.email,
+                            profilePhoto = user.photoUrl.toString()
+                        )
+                        val doc = fireStore.collection(USER_COLLECTION_NAME).document(user.uid)
                         doc.set(
-                            UserModel(
-                                id = user.uid,
-                                name = user.displayName ?: "Name not given",
-                                phoneNumber = user.phoneNumber,
-                                email = user.email,
-                                profilePhoto = user.photoUrl.toString()
-                            )
+                            userModel
                         ).addOnSuccessListener {
                             findNavController().popBackStack()
                             findNavController().navigate(R.id.mapFragment)
