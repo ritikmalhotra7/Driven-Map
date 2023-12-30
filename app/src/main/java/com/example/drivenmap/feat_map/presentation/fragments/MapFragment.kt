@@ -17,6 +17,8 @@ import android.widget.Toast
 import androidmads.library.qrgenearator.QRGContents
 import androidmads.library.qrgenearator.QRGEncoder
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -72,7 +74,6 @@ class MapFragment : Fragment() {
     }
     @Inject
     lateinit var mAuth: FirebaseAuth
-
     @Inject
     lateinit var fireStore: FirebaseFirestore
 
@@ -84,11 +85,13 @@ class MapFragment : Fragment() {
 
     private var currentLocation: Location? = null
 
+    private var count: Int = 0
+
     private lateinit var serviceIntent: Intent
     private lateinit var permissionManager: PermissionManager
     private var codeScanner: CodeScanner? = null
     private var marker: Marker? = null
-    private var currentUser: UserModel? = null
+    private lateinit var currentUser:UserModel
     private var bottomSheetForQR: BottomSheetDialog? = null
 
     override fun onCreateView(
@@ -161,37 +164,46 @@ class MapFragment : Fragment() {
                 when (it) {
                     is ResponseState.Success -> {
                         it.data?.let { user ->
+                            currentUser = user
                             binding.apply {
-                                user.active?.let { isActive ->
+                                user.active.let { isActive ->
                                     if (isActive) {
-                                        fragmentMapBtStartSession.text =
-                                            getString(R.string.stop_this_session)
+                                        fragmentMapBtStartSession.text = getString(R.string.stop_this_session)
                                         updateRecyclerViewAdapter(user.addedMembers.distinctBy { it.id })
-                                        fragmentMapBtQr.visibility = View.GONE
+                                        if(user.host){
+                                            fragmentMapBtStartSession.isVisible = true
+                                            fragmentMapBtQr.isVisible = true
+                                            fragmentMapBtStartSession.setOnClickListener {
+                                                val addedMemberIds :List<String> = user.addedMembers.map { it.id!! }.toMutableList().apply {
+                                                    add(user.id!!)
+                                                }
+                                                viewModel.stopSession(addedMemberIds)
+                                                viewModel.stopSessionResult.observe(viewLifecycleOwner){
+                                                    if(it.javaClass == ResponseState.Success::class.java){
+                                                        Toast.makeText(requireContext(),"Stopped Session",Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            }
+                                        }else{
+                                            fragmentMapBtStartSession.isGone = true
+                                            fragmentMapBtQr.isGone = true
+                                            fragmentMapBtStartSession.setOnClickListener{}
+                                            fragmentMapBtQr.setOnClickListener {}
+                                        }
                                         bottomSheetForQR?.let{
                                             if (it.isShowing) {
                                                 it.dismiss()
                                             }
                                         }
-                                        fragmentMapBtStartSession.setOnClickListener {
-                                            val addedMemberIds :List<String> = user.addedMembers.map { it.id!! }.toMutableList().apply {
-                                                add(user.id!!)
-                                            }
-                                            viewModel.stopSession(addedMemberIds)
-                                            viewModel.stopSessionResult.observe(viewLifecycleOwner){
-                                                if(it.javaClass == ResponseState.Success::class.java){
-                                                    Toast.makeText(requireContext(),"Stopped Session",Toast.LENGTH_SHORT).show()
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        fragmentMapBtStartSession.text =
-                                            getString(R.string.start_a_session)
+                                    } else{
+                                        fragmentMapBtStartSession.visibility = View.VISIBLE
+                                        fragmentMapBtQr.visibility = View.VISIBLE
+
+                                        fragmentMapBtStartSession.text = getString(R.string.start_a_session)
                                         updateRecyclerViewAdapter(listOf())
                                         fragmentMapBtStartSession.setOnClickListener {
                                             openBottomSheetForAddingMembers()
                                         }
-                                        fragmentMapBtQr.visibility = View.VISIBLE
                                         fragmentMapBtQr.setOnClickListener {
                                             openBottomSheetForGeneratedQR()
                                         }
@@ -278,17 +290,15 @@ class MapFragment : Fragment() {
         val addMemberAdapter = AddMemberBottomSheetAdapter()
         val addedMemberList = arrayListOf<String>()
         addedMemberList.add(mAuth.currentUser!!.uid)
-        if (codeScanner == null) {
-            codeScanner =
-                CodeScanner(requireContext(), binding.addMembersBottomSheetLayoutCsv).apply {
-                    camera = CodeScanner.CAMERA_BACK // or CAMERA_FRONT or specific camera id
-                    formats = CodeScanner.ALL_FORMATS // list of type BarcodeFormat,
-                    autoFocusMode = AutoFocusMode.SAFE // or CONTINUOUS
-                    scanMode = ScanMode.SINGLE // or CONTINUOUS or PREVIEW
-                    isAutoFocusEnabled = true // Whether to enable auto focus or not
-                    isFlashEnabled = false // Whether to enable flash or not
-                }
-        }
+        codeScanner =
+            CodeScanner(requireContext(), binding.addMembersBottomSheetLayoutCsv).apply {
+                camera = CodeScanner.CAMERA_BACK // or CAMERA_FRONT or specific camera id
+                formats = CodeScanner.ALL_FORMATS // list of type BarcodeFormat,
+                autoFocusMode = AutoFocusMode.SAFE // or CONTINUOUS
+                scanMode = ScanMode.SINGLE // or CONTINUOUS or PREVIEW
+                isAutoFocusEnabled = true // Whether to enable auto focus or not
+                isFlashEnabled = false // Whether to enable flash or not
+            }
         binding.apply {
             codeScanner?.startPreview()
             addMembersBottomSheetLayoutCsv.setOnClickListener {
@@ -398,18 +408,20 @@ class MapFragment : Fragment() {
                     }
                 }
             }
-
-            /*//updating every added member from firestore
-            val addedMembers = addedMembersAdapter.getList().toMutableList()
-            val updatedAddedMembers = addedMembers
-            addedMembers.forEach { addedUser ->
-                userDoc(addedUser.id!!).get().addOnSuccessListener {
-                    val user = it.toObject(UserModel::class.java)
-                    updatedAddedMembers.remove(addedUser)
-                    updatedAddedMembers.add(user!!.toAddedUser())
+            if(currentUser.active){
+                viewModel.locationUpdatesToOther(addedMembersAdapter.getList().map { it.id!! },
+                    tempCurrentLoc
+                )
+                viewModel.locationUpdatesToOthersResult.observe(viewLifecycleOwner){
+                    when(it){
+                        is ResponseState.Success->{
+                            addedMembersAdapter.setData(currentUser.addedMembers)
+                        }
+                        is ResponseState.Error ->{}
+                        is ResponseState.Loading ->{}
+                    }
                 }
-            }*/
-
+            }
         }
     }
     private val locationReceiver = object : BroadcastReceiver() {

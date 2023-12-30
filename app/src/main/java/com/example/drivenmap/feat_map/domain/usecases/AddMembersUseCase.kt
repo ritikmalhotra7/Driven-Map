@@ -8,8 +8,9 @@ import javax.inject.Inject
 class AddMembersUseCase @Inject constructor(private val mapRepository: MapRepository) {
     operator fun invoke(
         collectionName: String,
+        hostId:String,
         addedMembersIds: List<String>
     ): Flow<ResponseState<Boolean>> {
-        return mapRepository.addMembersAndStartSession(collectionName, addedMembersIds)
+        return mapRepository.addMembersAndStartSession(collectionName,hostId, addedMembersIds)
     }
 }

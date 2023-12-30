@@ -5,8 +5,8 @@ data class UserModel(
     val name:String? = null,
     val phoneNumber:String? = null,
     val email:String? = null,
-    val active:Boolean? = null,
-    val host:Boolean? = null,
+    val active:Boolean = false,
+    val host:Boolean = false,
     val currentLocation: Location? = null,
     val addedMembers:ArrayList<AddedUser> = arrayListOf(),
     val profilePhoto: String? = null

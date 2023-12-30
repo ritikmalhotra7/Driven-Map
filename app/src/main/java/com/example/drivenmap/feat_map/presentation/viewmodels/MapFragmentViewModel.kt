@@ -10,6 +10,7 @@ import com.example.drivenmap.feat_map.domain.models.Location
 import com.example.drivenmap.feat_map.domain.models.UserModel
 import com.example.drivenmap.feat_map.domain.usecases.AddMembersUseCase
 import com.example.drivenmap.feat_map.domain.usecases.GetUserDataUseCase
+import com.example.drivenmap.feat_map.domain.usecases.LocationUpdateToOthersUseCase
 import com.example.drivenmap.feat_map.domain.usecases.LocationUpdateUseCase
 import com.example.drivenmap.feat_map.domain.usecases.StopSessionUseCase
 import com.google.firebase.auth.FirebaseAuth
@@ -24,11 +25,10 @@ class MapFragmentViewModel @Inject constructor(
     private val getUserDataUc: GetUserDataUseCase,
     private val addMembersUc:AddMembersUseCase,
     private val locationUpdateUc: LocationUpdateUseCase,
+    private val locationUpdateToOthersUc: LocationUpdateToOthersUseCase,
     private val stopSessionUseCase: StopSessionUseCase,
     private val mAuth: FirebaseAuth
 ) : ViewModel() {
-
-    val currentId = mAuth.currentUser!!.uid
 
     private val _userLiveData = MutableLiveData<ResponseState<UserModel>>()
     val userLiveData: LiveData<ResponseState<UserModel>> = _userLiveData
@@ -39,8 +39,15 @@ class MapFragmentViewModel @Inject constructor(
     private val _locationUpdateResult = MutableLiveData<ResponseState<Boolean>>()
     val locationUpdateResult : LiveData<ResponseState<Boolean>> = _locationUpdateResult
 
+    private val _locationUpdatesToOthersResult = MutableLiveData<ResponseState<Boolean>>()
+    val locationUpdatesToOthersResult : LiveData<ResponseState<Boolean>> = _locationUpdatesToOthersResult
+
     private val _stoppingSessionResult = MutableLiveData<ResponseState<Boolean>>()
     val stopSessionResult : LiveData<ResponseState<Boolean>> = _stoppingSessionResult
+
+    val currentId = mAuth.currentUser!!.uid
+    var isActive = userLiveData.value?.data?.active?:false
+    var isHost = userLiveData.value?.data?.host?:false
 
     init {
         getUser()
@@ -56,7 +63,7 @@ class MapFragmentViewModel @Inject constructor(
 
     }
     fun addMembers(addedMemberIds: List<String>) = viewModelScope.launch(Dispatchers.IO) {
-        addMembersUc(USER_COLLECTION_NAME,addedMemberIds).collectLatest {
+        addMembersUc(USER_COLLECTION_NAME,currentId, addedMemberIds).collectLatest {
             _addedMembersResult.postValue(it)
         }
     }
@@ -69,6 +76,11 @@ class MapFragmentViewModel @Inject constructor(
     fun stopSession(membersIds:List<String>) = viewModelScope.launch(Dispatchers.IO) {
         stopSessionUseCase(USER_COLLECTION_NAME,membersIds).collectLatest {
             _stoppingSessionResult.postValue(it)
+        }
+    }
+    fun locationUpdatesToOther(addedMembers:List<String>,location:Location) = viewModelScope.launch(Dispatchers.IO) {
+        locationUpdateToOthersUc(USER_COLLECTION_NAME, addedMembers,currentId,location).collectLatest {
+            _locationUpdatesToOthersResult.postValue(it)
         }
     }
 

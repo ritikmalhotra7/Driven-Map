@@ -16,4 +16,5 @@
     <string name="done">Done</string>
     <string name="stop_this_session">Stop this session</string>
     <string name="added_members">Added Members</string>
+    <string name="show_qr">show QR</string>
 </resources>

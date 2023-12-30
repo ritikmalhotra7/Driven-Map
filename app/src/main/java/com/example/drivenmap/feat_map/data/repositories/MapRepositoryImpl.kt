@@ -1,5 +1,6 @@
 package com.example.drivenmap.feat_map.data.repositories
 
+import android.util.Log
 import com.example.drivenmap.feat_core.utils.ResponseState
 import com.example.drivenmap.feat_map.data.mappers.toAddedUser
 import com.example.drivenmap.feat_map.domain.models.AddedUser
@@ -42,6 +43,7 @@ class MapRepositoryImpl @Inject constructor(
 
     override fun addMembersAndStartSession(
         collection: String,
+        hostId:String,
         addedMembersIds: List<String>
     ): Flow<ResponseState<Boolean>> = flow {
         emit(ResponseState.Loading())
@@ -49,13 +51,16 @@ class MapRepositoryImpl @Inject constructor(
         try {
             mCollection.whereIn("id", addedMembersIds).snapshots().take(1).collect {
                 it.documents.forEach { documentSnapshot ->
-                    val dataToBeUpdated = mapOf(
+                    val dataToBeUpdated = mutableMapOf(
                         Pair(
                             "addedMembers",
                             it.documents.filterNot { it.get("id") == documentSnapshot.id }
                                 .map { it.toObject(UserModel::class.java)?.toAddedUser() }
                         ), Pair("active", true)
                     )
+                    if(documentSnapshot.id == hostId){
+                        dataToBeUpdated["host"] = true
+                    }
                     mCollection.document(documentSnapshot.id).update(dataToBeUpdated).await()
                 }
             }
@@ -84,6 +89,34 @@ class MapRepositoryImpl @Inject constructor(
         awaitClose()
     }
 
+    override fun locationUpdateInOthers(
+        collection: String,
+        membersAdded: List<String>,
+        currentId:String,
+        location:Location
+    ): Flow<ResponseState<Boolean>> = flow{
+        val mCollection = fireStore.collection(collection)
+        emit(ResponseState.Loading())
+        try {
+            val addedMembers = arrayListOf<AddedUser>()
+            mCollection.whereIn("id", membersAdded).snapshots().take(1).collectLatest {
+                it.documents.forEach { documentSnapshot ->
+                    val addedUser = documentSnapshot.toObject(UserModel::class.java)!!.toAddedUser()
+                    addedMembers.add(addedUser)
+                    Log.d("taget-location-document","${addedUser.currentLocation}, ${addedUser.id}")
+                }
+                val dataToBeUpdated = mapOf(
+                    Pair("addedMembers",addedMembers),
+                )
+                mCollection.document(currentId).update(dataToBeUpdated).await()
+                Log.d("taget-location-others","${addedMembers.map { it.currentLocation?.latitude }},${addedMembers.map { it.id }}" )
+            }
+            emit(ResponseState.Success(true))
+        } catch (e: Exception) {
+            emit(ResponseState.Error(e.toString()))
+        }
+    }
+
     override fun stopSession(
         collection: String,
         addedMembersIds: List<String>
@@ -97,7 +130,7 @@ class MapRepositoryImpl @Inject constructor(
                         val dataToBeUpdated = mapOf(
                             Pair(
                                 "addedMembers", arrayListOf<AddedUser>()
-                            ), Pair("active", false)
+                            ), Pair("active", false),Pair("host",false)
                         )
                         mCollection.document(documentSnapshot.id).update(dataToBeUpdated).await()
                     }

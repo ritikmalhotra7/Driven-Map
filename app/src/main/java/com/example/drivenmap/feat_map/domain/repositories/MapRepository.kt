@@ -7,7 +7,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface MapRepository {
     fun getUser(collection:String, document:String): Flow<ResponseState<UserModel>>
-    fun addMembersAndStartSession(collection: String, addedMembersIds:List<String>):Flow<ResponseState<Boolean>>
+    fun addMembersAndStartSession(collection: String, hostId:String,addedMembersIds:List<String>):Flow<ResponseState<Boolean>>
     fun locationUpdate(collection: String,document: String,location:Location):Flow<ResponseState<Boolean>>
+    fun locationUpdateInOthers(collection: String,membersAdded:List<String>,currentId:String,location:Location):Flow<ResponseState<Boolean>>
     fun stopSession(collection: String,addedMembersIds: List<String>):Flow<ResponseState<Boolean>>
 }

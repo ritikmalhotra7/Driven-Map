@@ -5,9 +5,6 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import coil.load
-import coil.transform.CircleCropTransformation
-import com.example.drivenmap.R
 import com.example.drivenmap.databinding.AddedMemberItemBinding
 import com.example.drivenmap.feat_map.domain.models.AddedUser
 
@@ -16,7 +13,7 @@ class AddedMembersAdapter:RecyclerView.Adapter<AddedMembersAdapter.ViewHolder>()
     private var clickListener:((AddedUser)->Unit)? = null
     private val callback = object: DiffUtil.ItemCallback<AddedUser>(){
         override fun areItemsTheSame(oldItem: AddedUser, newItem: AddedUser): Boolean {
-            return oldItem.id == newItem.id
+            return false
         }
 
         override fun areContentsTheSame(oldItem: AddedUser, newItem: AddedUser): Boolean {
@@ -37,7 +34,7 @@ class AddedMembersAdapter:RecyclerView.Adapter<AddedMembersAdapter.ViewHolder>()
                         placeholder(R.drawable.baseline_person_pin_24)
                         transformations(CircleCropTransformation())
                     }*/
-                    addedMemberItemTvDistanceAway.text = "1.2 KM"
+                    addedMemberItemTvDistanceAway.text = item.currentLocation?.latitude.toString()
                     root.setOnClickListener {
                         clickListener?.let{
                             it(item)
