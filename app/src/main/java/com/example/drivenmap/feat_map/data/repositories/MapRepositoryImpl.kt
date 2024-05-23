@@ -232,6 +232,7 @@ class MapRepositoryImpl @Inject constructor(
                 )
                 mCollectionUsers.document(user?.id?:"").update(data)
         }
+        mCollection.document(groupId).delete()
     }
 
     private suspend fun updateUserWithGroupData(

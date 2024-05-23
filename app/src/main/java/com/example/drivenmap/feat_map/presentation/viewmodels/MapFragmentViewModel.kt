@@ -53,6 +53,7 @@ class MapFragmentViewModel @Inject constructor(
 
     fun cancelGroup(groupId:String) = viewModelScope.launch(Dispatchers.IO){
         cancelGroupUsecase.invoke(groupId)
+        getGroup(groupId)
     }
 
     fun getGroup(groupId:String) = viewModelScope.launch(Dispatchers.IO){
