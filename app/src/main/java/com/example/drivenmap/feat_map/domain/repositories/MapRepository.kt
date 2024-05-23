@@ -1,14 +1,19 @@
 package com.example.drivenmap.feat_map.domain.repositories
 
 import com.example.drivenmap.feat_core.utils.ResponseState
-import com.example.drivenmap.feat_map.domain.models.Location
-import com.example.drivenmap.feat_map.domain.models.UserModel
+import com.example.drivenmap.feat_map.data.dto.GroupDto
+import com.example.drivenmap.feat_map.data.dto.LocationDto
+import com.example.drivenmap.feat_map.data.dto.UserDto
 import kotlinx.coroutines.flow.Flow
 
 interface MapRepository {
-    fun getUser(collection:String, document:String): Flow<ResponseState<UserModel>>
-    fun addMembersAndStartSession(collection: String, hostId:String,addedMembersIds:List<String>):Flow<ResponseState<Boolean>>
-    fun locationUpdate(collection: String,document: String,location:Location):Flow<ResponseState<Boolean>>
-    fun locationUpdateInOthers(collection: String,membersAdded:List<String>,currentId:String,location:Location):Flow<ResponseState<Boolean>>
-    fun stopSession(collection: String,addedMembersIds: List<String>):Flow<ResponseState<Boolean>>
+    suspend fun createGroup(createdBy: String, users: List<String>)
+    suspend fun getGroup(groupId: String): Flow<ResponseState<GroupDto>>
+    suspend fun getUser(userId: String): Flow<ResponseState<UserDto>>
+    suspend fun updateUserLocationInGroup(
+        groupId: String,
+        userId: String,
+        location: LocationDto
+    )
+    suspend fun cancelGroup(groupId: String)
 }

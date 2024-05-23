@@ -14,7 +14,7 @@ import androidx.navigation.fragment.findNavController
 import com.example.drivenmap.R
 import com.example.drivenmap.databinding.FragmentLoginBinding
 import com.example.drivenmap.feat_core.utils.Utils.USER_COLLECTION_NAME
-import com.example.drivenmap.feat_map.domain.models.UserModel
+import com.example.drivenmap.feat_map.data.dto.UserDto
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -66,11 +66,11 @@ class LoginFragment : Fragment() {
                         )
                     ).addOnSuccessListener {
                         val user = it.user!!
-                        val userModel = UserModel(
+                        val userModel = UserDto(
                             id = user.uid,
-                            name = user.displayName ?: "Name not given",
+                            userName = user.displayName ?: "Name not given",
                             phoneNumber = user.phoneNumber,
-                            email = user.email,
+                            email = user.email!!,
                             profilePhoto = user.photoUrl.toString()
                         )
                         val doc = fireStore.collection(USER_COLLECTION_NAME).document(user.uid)

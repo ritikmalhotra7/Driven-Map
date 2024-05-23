@@ -9,7 +9,11 @@
         android:id="@+id/mapFragment"
         android:name="com.example.drivenmap.feat_map.presentation.fragments.MapFragment"
         android:label="fragment_map"
-        tools:layout="@layout/fragment_map" />
+        tools:layout="@layout/fragment_map" >
+        <action
+            android:id="@+id/action_mapFragment_to_addMemberDialogFragment"
+            app:destination="@id/addMemberDialogFragment" />
+    </fragment>
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.example.drivenmap.feat_login.presentation.fragments.LoginFragment"
@@ -32,4 +36,9 @@
             android:id="@+id/action_splashFragment_to_mapFragment"
             app:destination="@id/mapFragment" />
     </fragment>
+    <dialog
+        android:id="@+id/addMemberDialogFragment"
+        android:name="com.example.drivenmap.feat_map.presentation.fragments.AddMemberDialogFragment"
+        android:label="fragment_add_member_dialog"
+        tools:layout="@layout/fragment_add_member_dialog" />
 </navigation>

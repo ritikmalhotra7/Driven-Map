@@ -1,5 +1,7 @@
 package com.example.drivenmap.feat_core.utils
 
+import android.util.Log
+
 object Utils {
     const val MAP_ZOOM = 18f
     const val REQUEST_CODE_FORE_LOCATION_PERMISSION = 100
@@ -13,4 +15,8 @@ object Utils {
     const val CURRENT_LOCATION_LONGITUDE = "CURRENT_LOCATION_LONGITUDE"
     const val USER_COLLECTION_NAME = "USERS"
 
+}
+
+fun Any.logd(tag:String = ""){
+    Log.d("Taget: $tag", this.toString())
 }
