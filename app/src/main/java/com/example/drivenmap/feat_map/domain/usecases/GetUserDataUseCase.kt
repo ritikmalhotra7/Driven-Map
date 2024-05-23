@@ -6,8 +6,8 @@ import com.example.drivenmap.feat_map.domain.repositories.MapRepository
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-class SetUserData @Inject constructor(private val mapRepository: MapRepository) {
-    operator fun invoke(collectionName:String, documentName:String, data:UserModel): Flow<ResponseState<Boolean>> {
-        return mapRepository.setUserDataToFireStore(collectionName, documentName,data)
+class GetUserDataUseCase @Inject constructor(private val mapRepository: MapRepository) {
+    operator fun invoke(collectionName:String, documentName:String): Flow<ResponseState<UserModel>> {
+        return mapRepository.getUser(collectionName, documentName)
     }
 }

@@ -67,7 +67,7 @@
         android:id="@+id/fragment_map_bt_qr"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/baseline_qr_code_24"
+        android:src="@drawable/ic_launcher_foreground"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="@id/guideline_v_70_30"
         app:layout_constraintEnd_toEndOf="parent"

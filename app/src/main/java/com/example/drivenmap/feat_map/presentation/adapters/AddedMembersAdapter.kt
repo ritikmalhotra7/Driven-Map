@@ -33,11 +33,11 @@ class AddedMembersAdapter:RecyclerView.Adapter<AddedMembersAdapter.ViewHolder>()
         fun setData(item: AddedUser, position: Int) {
             binding.apply {
                 item.apply {
-                    addedMemberItemIvDisplayPhoto.load(item.profilePhoto){
+                    /*addedMemberItemIvDisplayPhoto.load(item.profilePhoto){
                         placeholder(R.drawable.baseline_person_pin_24)
                         transformations(CircleCropTransformation())
-                    }
-                    addedMemberItemTvDistanceAway.text = distanceAway?:"1.2 KM"
+                    }*/
+                    addedMemberItemTvDistanceAway.text = "1.2 KM"
                     root.setOnClickListener {
                         clickListener?.let{
                             it(item)
