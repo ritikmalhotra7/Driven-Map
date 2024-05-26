@@ -7,53 +7,51 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import coil.transform.CircleCropTransformation
-import com.example.drivenmap.R
-import com.example.drivenmap.databinding.AddedMemberItemBinding
-import com.example.drivenmap.feat_map.domain.models.AddedUser
+import com.example.drivenmap.databinding.LayoutAddedMemberItemBinding
+import com.example.drivenmap.feat_map.data.dto.UserXDto
 
 class AddedMembersAdapter:RecyclerView.Adapter<AddedMembersAdapter.ViewHolder>() {
 
-    private var clickListener:((AddedUser)->Unit)? = null
-    private val callback = object: DiffUtil.ItemCallback<AddedUser>(){
-        override fun areItemsTheSame(oldItem: AddedUser, newItem: AddedUser): Boolean {
-            return oldItem.id == newItem.id
+    private var clickListener:((UserXDto)->Unit)? = null
+    private val callback = object: DiffUtil.ItemCallback<UserXDto>(){
+        override fun areItemsTheSame(oldItem: UserXDto, newItem: UserXDto): Boolean {
+            return false
         }
 
-        override fun areContentsTheSame(oldItem: AddedUser, newItem: AddedUser): Boolean {
+        override fun areContentsTheSame(oldItem: UserXDto, newItem: UserXDto): Boolean {
             return oldItem.toString() == newItem.toString()
         }
     }
     private val differ = AsyncListDiffer(this,callback)
 
-    fun setData(list:List<AddedUser>){
+    fun setData(list:List<UserXDto>){
         differ.submitList(list)
     }
-    fun getList(): MutableList<AddedUser> = differ.currentList
-    inner class ViewHolder(private val binding:AddedMemberItemBinding):RecyclerView.ViewHolder(binding.root) {
-        fun setData(item: AddedUser, position: Int) {
+    fun getList(): MutableList<UserXDto> = differ.currentList
+    inner class ViewHolder(private val binding:LayoutAddedMemberItemBinding):RecyclerView.ViewHolder(binding.root) {
+        fun setData(item: UserXDto, position: Int) {
             binding.apply {
                 item.apply {
-                    /*addedMemberItemIvDisplayPhoto.load(item.profilePhoto){
-                        placeholder(R.drawable.baseline_person_pin_24)
-                        transformations(CircleCropTransformation())
-                    }*/
-                    addedMemberItemTvDistanceAway.text = "1.2 KM"
                     root.setOnClickListener {
                         clickListener?.let{
                             it(item)
                         }
+                    }
+                    tvEmail.text = item.email
+                    ivProfile.load(item.profilePhoto){
+                        transformations(CircleCropTransformation())
                     }
                 }
             }
         }
     }
 
-    fun setClickListener(onClickItem:(AddedUser)->Unit){
+    fun setClickListener(onClickItem:(UserXDto)->Unit){
         this.clickListener = onClickItem
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        return ViewHolder(AddedMemberItemBinding.inflate(LayoutInflater.from(parent.context),parent,false))
+        return ViewHolder(LayoutAddedMemberItemBinding.inflate(LayoutInflater.from(parent.context),parent,false))
     }
 
     override fun getItemCount() = differ.currentList.size

@@ -11,15 +11,11 @@ import com.example.drivenmap.feat_core.utils.Utils.CURRENT_LOCATION_LONGITUDE
 import com.example.drivenmap.feat_core.utils.Utils.FASTEST_LOCATION_INTERVAL
 import com.example.drivenmap.feat_core.utils.Utils.LOCATION_UPDATES
 import com.example.drivenmap.feat_core.utils.Utils.LOCATION_UPDATE_INTERVAL
-import com.example.drivenmap.feat_core.utils.Utils.USER_COLLECTION_NAME
-import com.example.drivenmap.feat_map.domain.models.AddedUser
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.maps.model.LatLng
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 

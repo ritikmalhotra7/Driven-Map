@@ -1,78 +1,98 @@
 package com.example.drivenmap.feat_map.presentation.viewmodels
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.drivenmap.feat_core.utils.ResponseState
-import com.example.drivenmap.feat_core.utils.Utils.USER_COLLECTION_NAME
-import com.example.drivenmap.feat_map.domain.models.Location
-import com.example.drivenmap.feat_map.domain.models.UserModel
-import com.example.drivenmap.feat_map.domain.usecases.AddMembersUseCase
-import com.example.drivenmap.feat_map.domain.usecases.GetUserDataUseCase
-import com.example.drivenmap.feat_map.domain.usecases.LocationUpdateUseCase
-import com.example.drivenmap.feat_map.domain.usecases.StopSessionUseCase
-import com.google.firebase.auth.FirebaseAuth
+import com.example.drivenmap.feat_core.utils.logd
+import com.example.drivenmap.feat_map.data.dto.GroupDto
+import com.example.drivenmap.feat_map.data.dto.LocationDto
+import com.example.drivenmap.feat_map.data.dto.UserDto
+import com.example.drivenmap.feat_map.domain.usecases.CancelGroupUsecase
+import com.example.drivenmap.feat_map.domain.usecases.CreateGroupUsecase
+import com.example.drivenmap.feat_map.domain.usecases.GetGroupUsecase
+import com.example.drivenmap.feat_map.domain.usecases.GetUserUsecase
+import com.example.drivenmap.feat_map.domain.usecases.UpdateLocationUsecase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class UIStates{
+    IS_IN_LOCATION_SHARING,NORMAL
+}
 @HiltViewModel
 class MapFragmentViewModel @Inject constructor(
-    private val getUserDataUc: GetUserDataUseCase,
-    private val addMembersUc:AddMembersUseCase,
-    private val locationUpdateUc: LocationUpdateUseCase,
-    private val stopSessionUseCase: StopSessionUseCase,
-    private val mAuth: FirebaseAuth
+    private val createGroupUsecase:CreateGroupUsecase,
+    private val getUserUsecase: GetUserUsecase,
+    private val getGroupUsecase: GetGroupUsecase,
+    private val updateLocationUsecase: UpdateLocationUsecase,
+    private val cancelGroupUsecase: CancelGroupUsecase
+
 ) : ViewModel() {
 
-    val currentId = mAuth.currentUser!!.uid
+    val uiState=MutableStateFlow<UIStates?>(null)
 
-    private val _userLiveData = MutableLiveData<ResponseState<UserModel>>()
-    val userLiveData: LiveData<ResponseState<UserModel>> = _userLiveData
+    private val _mCurrentUserState = MutableStateFlow<UserDto?>(null)
+    val mCurrentUserState = _mCurrentUserState.asStateFlow()
 
-    private val _addedMembersResult = MutableLiveData<ResponseState<Boolean>>()
-    val addedMembersResult : LiveData<ResponseState<Boolean>> = _addedMembersResult
+    private val _mGroupState = MutableSharedFlow<GroupDto?>()
+    val mGroupState = _mGroupState.asSharedFlow()
 
-    private val _locationUpdateResult = MutableLiveData<ResponseState<Boolean>>()
-    val locationUpdateResult : LiveData<ResponseState<Boolean>> = _locationUpdateResult
+    private val _errorState = MutableSharedFlow<String>()
+    val errorState = _errorState.asSharedFlow()
 
-    private val _stoppingSessionResult = MutableLiveData<ResponseState<Boolean>>()
-    val stopSessionResult : LiveData<ResponseState<Boolean>> = _stoppingSessionResult
-
-    init {
-        getUser()
+    fun createGroup(hostId:String,userEmails:List<String>) = viewModelScope.launch(Dispatchers.IO){
+        createGroupUsecase(hostId,userEmails)
     }
 
-    fun getUser() = viewModelScope.launch() {
-        getUserDataUc(
-            collectionName = USER_COLLECTION_NAME,
-            documentName = currentId
-        ).collectLatest {
-            _userLiveData.postValue(it)
-        }
-
-    }
-    fun addMembers(addedMemberIds: List<String>) = viewModelScope.launch(Dispatchers.IO) {
-        addMembersUc(USER_COLLECTION_NAME,addedMemberIds).collectLatest {
-            _addedMembersResult.postValue(it)
-        }
+    fun cancelGroup(groupId:String) = viewModelScope.launch(Dispatchers.IO){
+        cancelGroupUsecase.invoke(groupId)
+        getGroup(groupId)
     }
 
-    fun currentLocationUpdate(location:Location) = viewModelScope.launch(Dispatchers.IO) {
-        locationUpdateUc(USER_COLLECTION_NAME,currentId,location).collectLatest {
-            _locationUpdateResult.postValue(it)
+    fun getGroup(groupId:String) = viewModelScope.launch(Dispatchers.IO){
+        getGroupUsecase(groupId).collectLatest{state->
+            state.logd("state")
+            when(state){
+                is ResponseState.Success->{
+                    _mGroupState.emit(state.data)
+                }
+                is ResponseState.Error->{
+                    _errorState.emit(state.message?:"Something went wrong!")
+                }
+            }
         }
     }
-    fun stopSession(membersIds:List<String>) = viewModelScope.launch(Dispatchers.IO) {
-        stopSessionUseCase(USER_COLLECTION_NAME,membersIds).collectLatest {
-            _stoppingSessionResult.postValue(it)
-        }
+    fun updateLocation(groupId: String,userId:String,location:LocationDto) = viewModelScope.launch(Dispatchers.IO){
+        updateLocationUsecase(groupId, userId, location)
     }
 
-
+    fun getUser(userId:String) = viewModelScope.launch(Dispatchers.IO) {
+        getUserUsecase(userId).collectLatest{state->
+            state.logd("state")
+            when(state){
+                is ResponseState.Success->{
+                    _mCurrentUserState.update{
+                        state.data
+                    }
+                    if(!state.data?.groupId.isNullOrBlank()){
+                        uiState.update { UIStates.IS_IN_LOCATION_SHARING }
+                    }else{
+                        uiState.update { UIStates.NORMAL }
+                    }
+                }
+                is ResponseState.Error->{
+                    _errorState.emit(state.message?:"Something went wrong!")
+                }
+            }
+        }
+    }
 }
 
 
