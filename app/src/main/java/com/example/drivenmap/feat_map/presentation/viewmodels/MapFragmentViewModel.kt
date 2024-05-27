@@ -41,6 +41,9 @@ class MapFragmentViewModel @Inject constructor(
     private val _mCurrentUserState = MutableStateFlow<UserDto?>(null)
     val mCurrentUserState = _mCurrentUserState.asStateFlow()
 
+    private val _mUserState = MutableStateFlow<UserDto?>(null)
+    val mUserState = _mUserState.asStateFlow()
+
     private val _mGroupState = MutableSharedFlow<GroupDto?>()
     val mGroupState = _mGroupState.asSharedFlow()
 
@@ -58,7 +61,7 @@ class MapFragmentViewModel @Inject constructor(
 
     fun getGroup(groupId:String) = viewModelScope.launch(Dispatchers.IO){
         getGroupUsecase(groupId).collectLatest{state->
-            state.logd("state")
+            state.logd("state-group")
             when(state){
                 is ResponseState.Success->{
                     _mGroupState.emit(state.data)
@@ -73,9 +76,8 @@ class MapFragmentViewModel @Inject constructor(
         updateLocationUsecase(groupId, userId, location)
     }
 
-    fun getUser(userId:String) = viewModelScope.launch(Dispatchers.IO) {
+    fun getCurrentUser(userId:String) = viewModelScope.launch(Dispatchers.IO) {
         getUserUsecase(userId).collectLatest{state->
-            state.logd("state")
             when(state){
                 is ResponseState.Success->{
                     _mCurrentUserState.update{
@@ -85,6 +87,20 @@ class MapFragmentViewModel @Inject constructor(
                         uiState.update { UIStates.IS_IN_LOCATION_SHARING }
                     }else{
                         uiState.update { UIStates.NORMAL }
+                    }
+                }
+                is ResponseState.Error->{
+                    _errorState.emit(state.message?:"Something went wrong!")
+                }
+            }
+        }
+    }
+    fun getUser(userId:String) = viewModelScope.launch(Dispatchers.IO) {
+        getUserUsecase(userId).collectLatest{state->
+            when(state){
+                is ResponseState.Success->{
+                    _mUserState.update{
+                        state.data
                     }
                 }
                 is ResponseState.Error->{

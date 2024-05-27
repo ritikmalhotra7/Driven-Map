@@ -1,7 +1,6 @@
 package com.example.drivenmap.feat_map.data.repositories
 
 import com.example.drivenmap.feat_core.utils.ResponseState
-import com.example.drivenmap.feat_core.utils.logd
 import com.example.drivenmap.feat_map.data.dto.GroupDto
 import com.example.drivenmap.feat_map.data.dto.LocationDto
 import com.example.drivenmap.feat_map.data.dto.UserDto
@@ -149,7 +148,6 @@ class MapRepositoryImpl @Inject constructor(
         var userDtos = listOf<UserDto?>()
         userDtos = mCollectionUser.whereIn("email", users).get().await()
             .documents.map { it.toObject(UserDto::class.java) }
-        userDtos.logd("userIds")
         mCollection.document(createdBy).set(
             GroupDto(
                 createdBy,
@@ -175,7 +173,6 @@ class MapRepositoryImpl @Inject constructor(
                 trySend(ResponseState.Error("Something went wrong!"))
             } else {
                 value?.let {
-                    value.data?.logd("value-group")
                     trySend(ResponseState.Success(value.toObject(GroupDto::class.java)))
                 } ?: {
                     trySend(ResponseState.Error("Data doesn't exist!"))
@@ -207,9 +204,7 @@ class MapRepositoryImpl @Inject constructor(
     ) {
         val mCollection = fireStore.collection("GROUP")
         val group = mCollection.document(groupId).get().await().toObject(GroupDto::class.java)
-        group?.logd("group")
         group?.users?.let {
-            it.logd("user-location")
             mCollection.document(groupId)
                 .update("users", FieldValue.arrayRemove(it.firstOrNull { it.id == userId })).await()
             mCollection.document(groupId).update(
