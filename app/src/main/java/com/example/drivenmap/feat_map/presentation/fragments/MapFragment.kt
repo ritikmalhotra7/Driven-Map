@@ -29,7 +29,6 @@ import com.example.drivenmap.feat_core.utils.Utils.CURRENT_LOCATION_LATITUDE
 import com.example.drivenmap.feat_core.utils.Utils.CURRENT_LOCATION_LONGITUDE
 import com.example.drivenmap.feat_core.utils.Utils.LOCATION_UPDATES
 import com.example.drivenmap.feat_core.utils.Utils.MAP_ZOOM
-import com.example.drivenmap.feat_core.utils.logd
 import com.example.drivenmap.feat_map.data.dto.LocationDto
 import com.example.drivenmap.feat_map.data.dto.UserDto
 import com.example.drivenmap.feat_map.data.dto.UserXDto
@@ -38,6 +37,7 @@ import com.example.drivenmap.feat_map.presentation.services.TrackingService
 import com.example.drivenmap.feat_map.presentation.viewmodels.MapFragmentViewModel
 import com.example.drivenmap.feat_map.presentation.viewmodels.UIStates
 import com.example.drivenmap.feat_map.utils.Constants
+import com.example.drivenmap.feat_map.utils.Constants.ADDED_MEMBER_DETAILS_ID_KEY
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -63,6 +63,8 @@ class MapFragment : Fragment() {
 
     @Inject
     lateinit var fireStore: FirebaseFirestore
+
+    private var placeName = ""
 
     private val viewModel: MapFragmentViewModel by viewModels()
 
@@ -136,6 +138,9 @@ class MapFragment : Fragment() {
     private fun setViews() {
         addedMembersAdapter = AddedMembersAdapter().apply {
             setClickListener { addedUser ->
+                findNavController().navigate(R.id.action_mapFragment_to_addedMemberBottomSheetFragment,Bundle().apply {
+                    putString(ADDED_MEMBER_DETAILS_ID_KEY,addedUser.id)
+                })
                 addedUser.location?.let { currentLocation ->
                     updateMarker(currentLocation)
                 }
@@ -166,7 +171,6 @@ class MapFragment : Fragment() {
                             binding.ibCancel.setOnClickListener {
                                 viewModel.cancelGroup(group.id)
                             }
-                            group.users.logd("group-users")
                             updateRecyclerViewAdapter(group.users)
                         }
                     }
@@ -196,7 +200,6 @@ class MapFragment : Fragment() {
     }
 
     private fun updateRecyclerViewAdapter(addedUserList: List<UserXDto>?) {
-        (addedUserList?: listOf()).logd("addedUserList")
         addedMembersAdapter.setData(
             addedUserList?: listOf()
         )
@@ -228,19 +231,21 @@ class MapFragment : Fragment() {
                 p1.getDoubleExtra(CURRENT_LOCATION_LATITUDE, 0.0),
                 p1.getDoubleExtra(CURRENT_LOCATION_LONGITUDE, 0.0)
             )
-            "locationUpdated".logd("locationUpdated")
             val userId = mAuth.currentUser?.uid
-            userId?:"".logd("userId")
-            viewModel.getUser(userId ?: "")
+            viewModel.getCurrentUser(userId ?: "")
+            placeName = Constants.getLocationName(
+                requireContext(),
+                newLocation.latitude,
+                newLocation.longitude
+            )?:""
             if (currentUser != null && viewModel.uiState.value == UIStates.IS_IN_LOCATION_SHARING){
                 viewModel.updateLocation(
                     currentUser?.groupId ?: "",
                     currentUser?.id ?: "",
-                    LocationDto(lattitude = newLocation.latitude, newLocation.longitude, "")
+                    LocationDto(lattitude = newLocation.latitude, newLocation.longitude, placeName)
                 )
                 viewModel.getGroup(currentUser?.groupId ?: "")
             }else{
-                currentUser?:"ok".logd("current")
             }
             map.apply {
                 isMyLocationEnabled = true

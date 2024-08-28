@@ -13,6 +13,9 @@
         <action
             android:id="@+id/action_mapFragment_to_addMemberDialogFragment"
             app:destination="@id/addMemberDialogFragment" />
+        <action
+            android:id="@+id/action_mapFragment_to_addedMemberBottomSheetFragment"
+            app:destination="@id/addedMemberBottomSheetFragment" />
     </fragment>
     <fragment
         android:id="@+id/loginFragment"
@@ -41,4 +44,9 @@
         android:name="com.example.drivenmap.feat_map.presentation.fragments.AddMemberDialogFragment"
         android:label="fragment_add_member_dialog"
         tools:layout="@layout/fragment_add_member_dialog" />
+    <dialog
+        android:id="@+id/addedMemberBottomSheetFragment"
+        android:name="com.example.drivenmap.feat_map.presentation.dialogs.AddedMemberBottomSheetFragment"
+        android:label="fragment_added_member_bottom_sheet"
+        tools:layout="@layout/fragment_added_member_bottom_sheet" />
 </navigation>

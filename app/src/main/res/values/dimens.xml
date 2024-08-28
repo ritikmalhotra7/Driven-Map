@@ -13,4 +13,5 @@
     <dimen name="_128dp">128dp</dimen>
     <dimen name="_2dp">2dp</dimen>
     <dimen name="_8dp">8dp</dimen>
+    <dimen name="bottom_sheet_peek_height">8dp</dimen>
 </resources>
